@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(const BookRuangApp());
@@ -30,10 +32,52 @@ class _BookRuangPageState extends State<BookRuangPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController namaController = TextEditingController();
   final TextEditingController ruanganController = TextEditingController();
+  final String apiUrl = "http://localhost:5021/api/RoomLoans";
 
   List<Map<String, dynamic>> daftarPeminjaman = [];
 
   int? editIndex;
+
+  Future<void> fetchData() async {
+    final response = await http.get(Uri.parse(apiUrl));
+    print(response.body);
+
+    if(response.statusCode == 200){
+      final List data = jsonDecode(response.body);
+      setState(() {
+        daftarPeminjaman = List<Map<String, dynamic>>.from(data);
+      });
+    }
+  }
+
+  @override
+  void initState(){
+    super.initState();
+    fetchData();
+  }
+
+  // Fungsi tambahData
+  Future<void> tambahData() async{
+    await http.post(
+      Uri.parse(apiUrl),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "borrowerName": namaController.text,
+        "roomName": ruanganController.text,
+        "purpose": "Mobile App",
+        "date": DateTime.now().toIso8601String(),
+        "status": "pending"
+      }),
+    );
+
+    fetchData();
+  }
+
+  // Fungsi hapusData
+  Future<void> hapusData(int id) async {
+    await http.delete(Uri.parse("$apiUrl/$id"));
+    fetchData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,9 +195,9 @@ class _BookRuangPageState extends State<BookRuangPage> {
                     return Card(
                       child: ListTile(
                         title: Text(
-                            "${item["nama"]} - ${item["ruangan"]}"),
+                            "${item["borrowerName"]} - ${item["roomName"]}"),
                         subtitle: Text(
-                            "${item["tanggal"].toString().split(' ')[0]}"),
+                            "${item["Date"].toString().split(' ')[0]}"),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -161,8 +205,8 @@ class _BookRuangPageState extends State<BookRuangPage> {
                               icon: const Icon(Icons.edit, color: Colors.blue),
                               onPressed: () {
                                 setState(() {
-                                  namaController.text = item["nama"];
-                                  ruanganController.text = item["ruangan"];
+                                  namaController.text = item["borrowerName"];
+                                  ruanganController.text = item["roomName"];
                                   editIndex = index;
                                 });
                               },
