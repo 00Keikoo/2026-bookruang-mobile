@@ -32,7 +32,7 @@ class _BookRuangPageState extends State<BookRuangPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController namaController = TextEditingController();
   final TextEditingController ruanganController = TextEditingController();
-  final String apiUrl = "http://localhost:5021/api/RoomLoans";
+  final String apiUrl = "http://127.0.0.1:5021/api/RoomLoans";
 
   List<Map<String, dynamic>> daftarPeminjaman = [];
 
@@ -40,13 +40,14 @@ class _BookRuangPageState extends State<BookRuangPage> {
 
   Future<void> fetchData() async {
     final response = await http.get(Uri.parse(apiUrl));
-    print(response.body);
 
     if(response.statusCode == 200){
       final List data = jsonDecode(response.body);
       setState(() {
         daftarPeminjaman = List<Map<String, dynamic>>.from(data);
       });
+    } else {
+      print("Gagal ambil data");
     }
   }
 
@@ -67,6 +68,24 @@ class _BookRuangPageState extends State<BookRuangPage> {
         "purpose": "Mobile App",
         "date": DateTime.now().toIso8601String(),
         "status": "pending"
+      }),
+    );
+
+    fetchData();
+  }
+
+  // Fungsi editData
+  Future<void> editData(int id) async {
+    await http.put(
+      Uri.parse("$apiUrl/$id"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "id": id,
+        "borrowerName": namaController.text,
+        "roomName": ruanganController.text, 
+        "purpose": "Mobile App",
+        "date": DateTime.now().toIso8601String(),
+        "status": "pending",
       }),
     );
 
@@ -139,26 +158,15 @@ class _BookRuangPageState extends State<BookRuangPage> {
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState!.validate()) {
-                                setState(() {
-                                  if(editIndex != null){
-                                    //Mode edit
-                                    daftarPeminjaman[editIndex!] = {
-                                      "nama" : namaController.text,
-                                      "ruangan" : ruanganController.text,
-                                      "tanggal" : DateTime.now(),
-                                    };
-                                    editIndex = null;
-                                  }else {
-                                    // Mode tambah
-                                    daftarPeminjaman.add({
-                                      "nama" : namaController.text,
-                                      "ruangan" : ruanganController.text,
-                                      "tanggal" : DateTime.now(),
-                                    });
-                                  }
-                                });
+                            onPressed: () async{
+                              if(_formKey.currentState!.validate()){
+                                if(editIndex != null){
+                                  int id = daftarPeminjaman[editIndex!]["id"];
+                                  await editData(id);
+                                  editIndex = null;
+                                }else{
+                                  await tambahData();
+                                }
 
                                 namaController.clear();
                                 ruanganController.clear();
@@ -197,13 +205,13 @@ class _BookRuangPageState extends State<BookRuangPage> {
                         title: Text(
                             "${item["borrowerName"]} - ${item["roomName"]}"),
                         subtitle: Text(
-                            "${item["Date"].toString().split(' ')[0]}"),
+                            "${item["date"].toString().split('T')[0]}"),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () {
+                              onPressed: () async{
                                 setState(() {
                                   namaController.text = item["borrowerName"];
                                   ruanganController.text = item["roomName"];
@@ -213,10 +221,8 @@ class _BookRuangPageState extends State<BookRuangPage> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                setState(() {
-                                  daftarPeminjaman.removeAt(index);
-                                });
+                              onPressed: () async{
+                                hapusData(item["id"]);
                               },
                             ),
                           ],
