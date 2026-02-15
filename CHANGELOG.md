@@ -10,3 +10,9 @@
 - Delete loan
 - Integration with ASP.NET (backend API)
 - Basic UI for form and list
+
+## v1.1.0
+- Add approve/reject dialogs
+- Add status badges
+- Add filter by status
+- Update UI dengan gradient design
